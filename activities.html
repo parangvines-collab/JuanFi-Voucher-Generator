@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Log - MikroTik Voucher Generator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; background-color: #3d4044; }
+        .container { max-width: 800px; width: 100%; margin: 30px auto 0 auto; padding: 0 15px 30px 15px; }
+        .card { background-color: #191e2d; border-radius: 5px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 2px #000; }
+        h1 { color: #fff; text-align: center; margin: 40px 0 20px 0; font-size: 2em; }
+        h3 { color: #fff; margin-bottom: 15px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin: 5px 0; font-size: 14px; color: #fff; }
+        input, select { width: 100%; padding: 10px; background-color: #191e2d; border: 2px solid #485460; border-radius: 5px; color: white; font-size: 16px; }
+        input:focus { outline: none; border-color: dodgerblue; }
+        .btn { background-color: dodgerblue; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 15px; cursor: pointer; font-weight: 600; margin-top: 10px; }
+        .btn:hover { background-color: royalblue; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .link { text-align: center; margin-top: 20px; }
+        .link a { color: dodgerblue; text-decoration: none; font-size: 14px; }
+        .link a:hover { text-decoration: underline; }
+        .activity-item { background: #1e2430; border: 1px solid #485460; border-radius: 5px; padding: 10px; margin-bottom: 10px; }
+        .activity-item span { color: white; }
+        .activity-type { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: bold; margin-right: 10px; }
+        .type-voucher_generated { background: #28a745; }
+        .type-voucher_exported { background: #6f42c1; }
+        .type-user_login { background: #17a2b8; }
+        .type-user_registered { background: #ffc107; color: #333; }
+        .type-login_failed { background: #dc3545; }
+        .type-password_changed { background: #fd7e14; }
+        .type-cash_in_requested { background: #28a745; }
+        .type-cash_in_approved { background: #17a2b8; }
+        .type-cash_in_denied { background: #dc3545; }
+        .type-user_deleted { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Activity Log <button onclick="logout()" style="float:right;background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:14px;">Logout</button></h1>
+        
+        <div class="card">
+            <h3>Activity Logs</h3>
+            <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
+                <select id="filterType" onchange="loadActivities()" style="width:auto;">
+                    <option value="">All Types</option>
+                    <option value="voucher_generated">Voucher Generated</option>
+                    <option value="voucher_exported">Voucher Exported</option>
+                    <option value="user_login">User Login</option>
+                    <option value="user_registered">User Registered</option>
+                    <option value="login_failed">Failed Login</option>
+                    <option value="password_changed">Password Changed</option>
+                    <option value="cash_in_requested">Cash-In Requested</option>
+                    <option value="cash_in_approved">Cash-In Approved</option>
+                    <option value="cash_in_denied">Cash-In Denied</option>
+                    <option value="user_deleted">User Deleted</option>
+                </select>
+                <button onclick="clearActivities()" class="btn btn-danger" style="width:auto;padding:8px 16px;font-size:14px;">Clear All Activities</button>
+            </div>
+            <div id="activitiesList"></div>
+        </div>
+        
+        <div class="link">
+            <a href="index.html">Back to Voucher Generator</a> | <a href="account-manager.html">Account Manager</a>
+        </div>
+    </div>
+    
+    <script>
+    if (sessionStorage.getItem('authenticated') !== 'true') { window.location.href = 'login.html'; }
+    
+    var currentUser = sessionStorage.getItem('username');
+    if (!currentUser) { window.location.href = 'login.html'; }
+    
+    if (currentUser !== 'admin') { alert('Only admin can access this page'); window.location.href = 'index.html'; }
+    
+    function logout() { sessionStorage.removeItem('authenticated'); sessionStorage.removeItem('username'); window.location.href = 'login.html'; }
+    
+    function loadActivities() {
+        var filter = document.getElementById('filterType').value;
+        var activities = JSON.parse(localStorage.getItem('voucherActivities') || '[]');
+        
+        if (filter) {
+            activities = activities.filter(function(a) { return a.type === filter; });
+        }
+        
+        var list = document.getElementById('activitiesList');
+        list.innerHTML = '';
+        
+        if (activities.length === 0) {
+            list.innerHTML = '<span style="color:#aaa;font-size:14px;">No activities found.</span>';
+            return;
+        }
+        
+        activities.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+        
+        for (var i = 0; i < activities.length; i++) {
+            var activity = activities[i];
+            var div = document.createElement('div');
+            div.className = 'activity-item';
+            
+            var typeClass = 'type-' + activity.type;
+            var details = activity.details;
+            
+            var detailStr = '';
+            for (var key in details) {
+                if (details.hasOwnProperty(key)) {
+                    detailStr += key + ': ' + details[key] + ' | ';
+                }
+            }
+            if (detailStr.endsWith(' | ')) detailStr = detailStr.slice(0, -3);
+            
+            div.innerHTML = '<span><span class="activity-type ' + typeClass + '">' + activity.type + '</span>' +
+                '<strong>' + activity.user + '</strong> - ' + activity.description +
+                (detailStr ? '<br><small style="color:#aaa;">' + detailStr + '</small>' : '') +
+                '<br><small style="color:#aaa;">' + new Date(activity.timestamp).toLocaleString() + '</small></span>';
+            list.appendChild(div);
+        }
+    }
+    
+    function clearActivities() {
+        if (confirm('Delete all activity logs?')) {
+            localStorage.setItem('voucherActivities', '[]');
+            loadActivities();
+        }
+    }
+    
+    loadActivities();
+    </script>
+</body>
+</html>

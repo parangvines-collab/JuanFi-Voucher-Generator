@@ -1,0 +1,1007 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MikroTik Voucher Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; background-color: #3d4044; }
+        .container { max-width: 400px; width: 400px; margin: 30px auto 0 auto; padding: 0 15px 30px 15px; }
+        .card { background-color: #191e2d; border-radius: 5px; padding: 0 15px 30px 15px; margin-bottom: 20px; box-shadow: 0 0 2px #000; }
+        h1 { color: #fff; text-align: center; margin: 40px 0 40px 0; font-size: 2em; }
+        h3 { color: #fff; }
+        .form-inline { display: flex; flex-flow: row wrap; flex-direction: column; align-items: stretch; }
+        .form-group { margin: 5px 10px 10px 5px; }
+        label { display: block; margin: 5px 10px 5px 0; font-size: 12px; color: #fff; }
+        input, select { width: 100%; padding: 10px; background-color: #191e2d; border: 2px solid #485460; border-radius: 5px; color: white; font-size: 16px; margin: 5px 10px 10px 5px; }
+        input:focus, select:focus { outline: none; border-color: dodgerblue; }
+        .btn { background-color: dodgerblue; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 15px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 30px; }
+        .btn:hover { background-color: royalblue; }
+        .voucher-output { margin-top: 20px; }
+        .voucher-item { background: #1e2430; border: 1px solid #485460; border-radius: 5px; padding: 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; color: white; }
+        .voucher-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .voucher-code { font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; color: #fff; word-break: break-all; }
+        .voucher-amount { background: dodgerblue; color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; white-space: nowrap; }
+        .voucher-validity { background: #28a745; color: white; padding: 5px 15px; border-radius: 15px; font-size: 14px; white-space: nowrap; }
+        .copy-btn { background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 3px; cursor: pointer; margin-left: 10px; }
+        .copy-btn:hover { background: #218838; }
+        .export-btn { background: #485460; margin-top: 10px; }
+        .export-btn:hover { background: #3a4550; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        /* Template 1 - Standard (existing) */
+        .voucher-div { float: left; font-family: Verdana; border: 2px dashed #b5b5b5; width: 190px; height: 95px; margin: 10px; }
+        .voucher-amount-box { text-indent: 5px; display: block; background-color: rgb(220, 220, 220); color: #000000; width: 95px; transform: rotate(90deg); position: relative; top:38px; left:-38px; }
+        .voucher-box { position: relative; left:20px; top:-18px; background-color: #f8f8f8; padding: 5px; height: 85px; width:160px; }
+        .voucher-icon { position: relative; transform: rotate(-45deg); top: -72px; left: 113px; color: #ffd1d1; }
+        .hotspot-name { text-align: center; display: block; letter-spacing: 1px; background: rgb(42, 42, 42); color: aliceblue; padding: 2px; border-radius: 3px; font-size: 12px; }
+        .voucher-data { display: block; font-size: 11px; }
+        .voucher-data span { display: block; }
+        .voucher-code-box { text-align: center; font-size: 20px; font-weight: bold; margin: 4px; border: 1px solid #a8a8a8; color: rgb(255, 0, 0); }
+        /* Template 2 - Modern */
+        .voucher-div-template2 { float: left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; border: 2px solid #4a90e2; width: 190px; height: 95px; margin: 10px; border-radius: 8px; }
+        .voucher-amount-box-template2 { text-indent: 5px; display: block; background-color: #4a90e2; color: white; width: 95px; transform: rotate(90deg); position: relative; top:38px; left:-38px; border-radius: 0 5px 5px 0; }
+        .voucher-box-template2 { position: relative; left:20px; top:-18px; background-color: #f0f8ff; padding: 5px; height: 85px; width:160px; border-radius: 5px 0 0 5px; }
+        .voucher-icon-template2 { position: relative; transform: rotate(-45deg); top: -72px; left: 113px; color: #e6f2ff; }
+        .hotspot-name-template2 { text-align: center; display: block; letter-spacing: 0.5px; background: #1e3a5f; color: white; padding: 3px; border-radius: 3px; font-size: 11px; margin-bottom: 5px; }
+        .voucher-data-template2 { display: block; font-size: 10px; line-height: 1.3; }
+        .voucher-data-template2 span { display: block; }
+        .voucher-code-box-template2 { text-align: center; font-size: 18px; font-weight: bold; margin: 3px; border: 1px solid #4a90e2; color: #1e3a5f; letter-spacing: 1px; }
+        /* Template 3 - Classic */
+        .voucher-div-template3 { float: left; font-family: 'Courier New', monospace; border: 2px solid #8b4513; width: 190px; height: 95px; margin: 10px; }
+        .voucher-amount-box-template3 { text-indent: 5px; display: block; background-color: #8b4513; color: #f5deb3; width: 95px; transform: rotate(90deg); position: relative; top:38px; left:-38px; }
+        .voucher-box-template3 { position: relative; left:20px; top:-18px; background-color: #fff8dc; padding: 5px; height: 85px; width:160px; }
+        .voucher-icon-template3 { position: relative; transform: rotate(-45deg); top: -72px; left: 113px; color: #deb887; }
+        .hotspot-name-template3 { text-align: center; display: block; letter-spacing: 1px; background: #5d4037; color: #f5deb3; padding: 2px; border-radius: 3px; font-size: 11px; }
+        .voucher-data-template3 { display: block; font-size: 10px; }
+        .voucher-data-template3 span { display: block; }
+        .voucher-code-box-template3 { text-align: center; font-size: 19px; font-weight: bold; margin: 4px; border: 1px solid #8b4513; color: #8b0000; }
+        @media print { body {-webkit-print-color-adjust: exact;} }
+    </style>
+</head>
+<body>
+<div class="container">
+<script>
+if (sessionStorage.getItem('authenticated') !== 'true') {
+    window.location.href = 'login.html';
+}
+var username = sessionStorage.getItem('username');
+var isExpired = false;
+document.addEventListener('DOMContentLoaded', function() {
+var users = JSON.parse(localStorage.getItem('users') || '{}');
+      if (username && username !== 'admin' && !users[username]) {
+          logout();
+          return;
+      }
+     if (username) {
+         document.getElementById('userDisplay').textContent = 'Welcome, ' + username;
+     }
+    if (username === 'admin') {
+        document.getElementById('accountsLink').style.display = 'inline-block';
+        document.getElementById('expirationDisplay').textContent = ' (Permanent Account)';
+        var users = JSON.parse(localStorage.getItem('users') || '{}');
+        if (users[username] && typeof users[username] === 'object') {
+            var balance = users[username].balance || 0;
+            document.getElementById('balanceDisplay').textContent = ' | Balance: ' + balance;
+        }
+} else {
+         var users = JSON.parse(localStorage.getItem('users') || '{}');
+         if (users[username]) {
+             if (typeof users[username] !== 'object') {
+                 users[username] = { password: users[username], expiration: '', balance: 0 };
+                 localStorage.setItem('users', JSON.stringify(users));
+             } else if (users[username].balance === undefined) {
+                 users[username].balance = 0;
+                 localStorage.setItem('users', JSON.stringify(users));
+             }
+             
+             var exp = users[username].expiration;
+             var balance = users[username].balance || 0;
+             var portalKeyPrice = localStorage.getItem('portalKeyPrice') || '50';
+             var promoPrice = localStorage.getItem('promoPrice') || '30';
+             document.getElementById('balanceDisplay').textContent = ' | Balance: ' + balance + ' pesos';
+             document.getElementById('portalKeyPriceBadge').textContent = portalKeyPrice + ' pesos';
+             document.getElementById('promoPriceBadge').textContent = promoPrice + ' pesos';
+             document.getElementById('promoCard').style.display = 'block';
+            document.getElementById('cashInCard').style.display = 'block';
+             document.getElementById('portalKeyCard').style.display = 'block';
+             loadUserRequests();
+             loadPortalKeyRequests();
+             loadPromoHistory();
+             
+if (!exp) {
+                   document.getElementById('voucherForm').style.display = 'none';
+                   document.getElementById('vouchersHeader').style.display = 'none';
+                   document.getElementById('vouchersContent').style.display = 'none';
+                   document.getElementById('noAccessNotice').style.display = 'block';
+               } else {
+                  var expDate = new Date(exp);
+                  var today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  var lockoutKey = 'account_locked_' + username;
+                  var previouslyLocked = localStorage.getItem(lockoutKey) === 'true';
+                  
+                  if (expDate < today || previouslyLocked) {
+                      isExpired = true;
+                      localStorage.setItem(lockoutKey, 'true');
+                      document.getElementById('expirationDisplay').textContent = ' (Voucher Generator: EXPIRED)';
+                      document.getElementById('expirationDisplay').style.color = '#dc3545';
+                      document.getElementById('voucherForm').style.display = 'none';
+                      document.getElementById('vouchersHeader').style.display = 'none';
+                      document.getElementById('vouchersContent').style.display = 'none';
+                      document.getElementById('expiredNotice').style.display = 'block';
+                  } else {
+                     var diffTime = expDate - today;
+                     var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                     document.getElementById('expirationDisplay').textContent = ' (Voucher Generator: Expires ' + exp + ', ' + diffDays + ' days left)';
+                     localStorage.setItem(lockoutKey, 'false');
+                 }
+              }
+              if (localStorage.getItem('card_promoCardContent') === 'shown') {
+                  document.getElementById('promoCardContent').style.display = 'block';
+                  document.getElementById('promoToggle').textContent = 'Hide';
+              } else {
+                  document.getElementById('promoCardContent').style.display = 'none';
+                  document.getElementById('promoToggle').textContent = 'Show';
+              }
+              if (localStorage.getItem('card_cashInCardContent') === 'shown') {
+                  document.getElementById('cashInCardContent').style.display = 'block';
+                  document.getElementById('cashInToggle').textContent = 'Hide';
+              } else {
+                  document.getElementById('cashInCardContent').style.display = 'none';
+                  document.getElementById('cashInToggle').textContent = 'Show';
+              }
+              if (localStorage.getItem('card_portalKeyCardContent') === 'shown') {
+                  document.getElementById('portalKeyCardContent').style.display = 'block';
+                  document.getElementById('portalKeyToggle').textContent = 'Hide';
+              } else {
+                  document.getElementById('portalKeyCardContent').style.display = 'none';
+                  document.getElementById('portalKeyToggle').textContent = 'Show';
+              }
+          }
+      }
+  });</script>
+        <h1><img src="img/logo.png" alt="Logo" style="width: 250px; height: auto;"></h1>
+        <div style="text-align:right;margin-bottom:10px;">
+            <span id="userDisplay" style="color:#aaa;font-size:14px;"></span>
+            <span id="expirationDisplay" style="color:#aaa;font-size:14px;margin-left:10px;"></span>
+            <span id="balanceDisplay" style="color:#aaa;font-size:14px;margin-left:10px;"></span>
+            <a href="account-manager.html" id="accountsLink" style="display:none;background:#485460;color:white;text-decoration:none;padding:5px 10px;border-radius:3px;font-size:14px;margin-left:10px;">Accounts</a>
+        </div>
+        <div style="text-align:right;margin-bottom:20px;">
+            <button onclick="logout()" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:14px;">Logout</button>
+        </div>
+<div id="promoCard" class="card" style="display:none;">
+               <h3 style="display:flex;justify-content:space-between;align-items:center;"><span>Buy Voucher Generator</span><a href="javascript:void(0)" onclick="toggleCard('promoCardContent','promoToggle')" id="promoToggle" style="color:dodgerblue;font-size:12px;text-decoration:none;">Show</a></h3>
+               <div id="promoCardContent" style="display:none;">
+                   <p style="color:#aaa;font-size:14px;margin-bottom:10px;">Purchase access to the voucher generator for 1 month.</p>
+                   <button class="btn" onclick="buyPromo()" style="background:#28a745;display:flex;justify-content:space-between;align-items:center;"><span>Buy Voucher Generator</span><span id="promoPriceBadge" style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:10px;font-size:12px;margin-left:10px;">30 pesos</span></button>
+                   <div id="promoError" class="error" style="margin-top:10px;"></div>
+                   <div id="promoHistoryList" style="margin-top:15px;"></div>
+               </div>
+           </div>
+          <div id="portalKeyCard" class="card" style="display:none;">
+              <h3 style="display:flex;justify-content:space-between;align-items:center;"><span>Buy PortalKey</span><a href="javascript:void(0)" onclick="toggleCard('portalKeyCardContent','portalKeyToggle')" id="portalKeyToggle" style="color:dodgerblue;font-size:12px;text-decoration:none;">Show</a></h3>
+              <div id="portalKeyCardContent" style="display:none;">
+<p style="color:#aaa;font-size:14px;margin-bottom:10px;">Buy a PortalKey. PortalKeys are auto-generated based on MikroTik serial number.</p>
+                   <button class="btn" onclick="requestPortalKey()" style="background:#6f42c1;display:flex;justify-content:space-between;align-items:center;"><span>Buy PortalKey</span><span id="portalKeyPriceBadge" style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:10px;font-size:12px;margin-left:10px;">50 pesos</span></button>
+                  <div id="portalKeyError" class="error" style="margin-top:10px;"></div>
+                  <div id="portalKeySuccess" class="success" style="margin-top:10px;"></div>
+                  <div id="portalKeyList" style="margin-top:15px;"></div>
+              </div>
+          </div>
+<div id="cashInCard" class="card" style="display:none;">
+             <h3 style="display:flex;justify-content:space-between;align-items:center;"><span>Cash-In</span><a href="javascript:void(0)" onclick="toggleCard('cashInCardContent','cashInToggle')" id="cashInToggle" style="color:dodgerblue;font-size:12px;text-decoration:none;">Show</a></h3>
+             <div id="cashInCardContent" style="display:none;">
+                 <p style="color:#aaa;font-size:14px;margin-bottom:10px;">Cash-in to your account balance. Send payment to:</p>
+                 <div style="background:#1e2430;padding:10px;border-radius:5px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+                     <span style="color:#fff;font-family:monospace;font-size:16px;">09659067723</span>
+                     <button onclick="copyNumber()" style="background:#485460;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:12px;">Copy</button>
+                 </div>
+<form id="cashInForm">
+                      <div class="form-group">
+                          <label for="refNumber">Reference Number</label>
+                          <input type="text" id="refNumber" name="refNumber" placeholder="Enter reference number" required>
+                      </div>
+                      <div class="form-group">
+                          <label for="cashInAmount">Cash-In Amount (pesos)</label>
+                          <input type="number" id="cashInAmount" name="cashInAmount" min="1" value="30" required>
+                      </div>
+                      <button type="submit" class="btn" style="background:#28a745;">Submit Request</button>
+                  </form>
+                 <div id="cashInError" class="error" style="margin-top:10px;"></div>
+                 <div id="cashInSuccess" class="success" style="margin-top:10px;"></div>
+                 <div id="userRequestsList" style="margin-top:15px;"></div>
+             </div>
+         </div>
+        <div class="card">
+            <form id="voucherForm" class="form-inline">
+<div class="form-group">
+                     <label for="prefix">Voucher Prefix (max 2 letters, starts with letters)</label>
+                     <input type="text" id="prefix" name="prefix" maxlength="2" placeholder="VC" pattern="[A-Za-z]{1,2}" value="VC" required>
+                 </div>
+<div class="form-group">
+                      <label for="length">Voucher Length (total characters)</label>
+                      <input type="number" id="length" name="length" min="4" max="16" value="6" required>
+                  </div>
+                <div class="form-group">
+                    <label for="amount">Voucher Amount</label>
+                    <input type="number" id="amount" name="amount" min="1" value="5" required>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" min="1" max="1000" value="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="time">Time (minutes per voucher)</label>
+                    <input type="number" id="time" name="time" min="1" value="60" required>
+                </div>
+                <div class="form-group">
+                    <label for="validity">Validity (minutes)</label>
+                    <input type="number" id="validity" name="validity" min="1" value="60" required>
+                </div>
+                <div class="form-group">
+                    <label for="userProfile">User Profile (optional, uses default if empty)</label>
+                    <input type="text" id="userProfile" name="userProfile" placeholder="default">
+                </div>
+<div class="form-group">
+                     <label for="template">Voucher Template</label>
+                     <select id="template" name="template">
+                         <option value="template1">Standard Template</option>
+                         <option value="template2">Modern Template</option>
+                         <option value="template3">Classic Template</option>
+                     </select>
+                 </div>
+                 <div class="form-group">
+                     <label for="hotspotName">MikroTik Hotspot Name</label>
+                     <input type="text" id="hotspotName" name="hotspotName" placeholder="e.g., MikroTik Hotspot" value="MikroTik Hotspot" required>
+                 </div>
+                 <button type="submit" class="btn">Generate Vouchers</button>
+            </form>
+            <div id="error" class="error"></div>
+            <div id="success" class="success"></div>
+        </div>
+<div class="card">
+            <h3 id="vouchersHeader">Generated Vouchers</h3>
+            <div id="expiredNotice" style="display:none;color:#dc3545;text-align:center;padding:20px;font-size:18px;margin-bottom:10px;">Your voucher generator access has expired. Use the "Buy Voucher Generator" button below to renew.</div>
+             <div id="noAccessNotice" style="display:none;color:#dc3545;text-align:center;padding:20px;font-size:18px;margin-bottom:10px;">No access. Please purchase the Voucher Generator to get started.</div>
+            <div id="vouchersContent">
+                <button class="btn export-btn" onclick="exportToScript()" style="background: #485460;">Export MikroTik RSC</button>
+                <span style="color:#aaa;font-size:11px;display:block;margin-bottom:10px;">Click the Export MikroTik RSC button, then upload the file vouchers-XXXXXX-XXXX.rsc to your MikroTik router (Files section). After the upload is complete, open the MikroTik terminal and run the file using> "import file-name=vouchers-XXXXXX-XXXX.rsc"</span>
+                <span style="color:#aaa;font-size:11px;display:block;margin-bottom:10px;"><strong>Take Note:</strong> Vouchers can be used after the .rsc file is uploaded and imported in the MikroTik terminal.</span>
+                <div id="exportButtons" style="display:none;">
+                    <span style="color:#aaa;font-size:11px;">Optional:</span>
+                    <button class="btn export-btn" onclick="exportToCSV()">Export to CSV</button>
+                    <button class="btn export-btn" onclick="copyAllCodes()">Copy All Codes</button>
+                    <button class="btn export-btn" onclick="exportToPDF()" style="background: #6f42c1;">Export to PDF</button>
+                </div>
+                <div id="voucherList" class="voucher-output"></div>
+            </div>
+        </div>
+    </div>
+<script>
+var ActivitiesDB = (function() {
+    var ACTIVITIES_KEY = 'voucherActivities';
+    var PASSWORD_KEY = 'appPassword';
+    
+    var defaultPassword = 'admin123';
+    
+    function generateSalt() {
+        var array = new Uint8Array(16);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+    }
+    
+    function hashPassword(password, salt) {
+        var saltedPassword = password + salt;
+        var hash = 0;
+        for (var i = 0; i < saltedPassword.length; i++) {
+            var char = saltedPassword.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        var hashStr = (hash >>> 0).toString(16);
+        var extraHash = 0;
+        for (var i = 0; i < salt.length; i++) {
+            var char = salt.charCodeAt(i);
+            extraHash = ((extraHash << 5) - extraHash) + char;
+            extraHash = extraHash & extraHash;
+        }
+        return hashStr + extraHash.toString(16).padStart(8, '0');
+    }
+    
+    function init() {
+        if (!localStorage.getItem(PASSWORD_KEY)) {
+            var salt = generateSalt();
+            var hashedPass = hashPassword(defaultPassword, salt);
+            localStorage.setItem(PASSWORD_KEY, JSON.stringify({ hash: hashedPass, salt: salt }));
+        }
+        if (!localStorage.getItem(ACTIVITIES_KEY)) {
+            localStorage.setItem(ACTIVITIES_KEY, JSON.stringify([]));
+        }
+    }
+    
+    function validatePassword(password) {
+        var stored = localStorage.getItem(PASSWORD_KEY);
+        if (!stored) return false;
+        var data = JSON.parse(stored);
+        var hashedInput = hashPassword(password, data.salt);
+        return hashedInput === data.hash;
+    }
+    
+    function createPassword(newPassword) {
+        if (!newPassword || newPassword.length < 4) {
+            return { success: false, message: 'Password must be at least 4 characters' };
+        }
+        var salt = generateSalt();
+        var hashedPass = hashPassword(newPassword, salt);
+        localStorage.setItem(PASSWORD_KEY, JSON.stringify({ hash: hashedPass, salt: salt }));
+        logActivity('password_change', 'Password updated successfully');
+        return { success: true, message: 'Password created successfully' };
+    }
+    
+    function logActivity(type, description, details) {
+        var activities = JSON.parse(localStorage.getItem(ACTIVITIES_KEY) || '[]');
+        var user = sessionStorage.getItem('username') || 'anonymous';
+        activities.push({
+            id: Date.now() + Math.random().toString(36).substr(2, 5),
+            type: type,
+            user: user,
+            description: description,
+            details: details || {},
+            timestamp: new Date().toISOString()
+        });
+        localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities));
+    }
+    
+    function getActivities() {
+        return JSON.parse(localStorage.getItem(ACTIVITIES_KEY) || '[]');
+    }
+    
+    function getActivitiesByUser(username) {
+        var activities = getActivities();
+        return activities.filter(function(a) { return a.user === username; });
+    }
+    
+    function getActivitiesByType(type) {
+        var activities = getActivities();
+        return activities.filter(function(a) { return a.type === type; });
+    }
+    
+    function clearActivities() {
+        localStorage.setItem(ACTIVITIES_KEY, JSON.stringify([]));
+    }
+    
+    function deleteActivity(id) {
+        var activities = getActivities();
+        var filtered = activities.filter(function(a) { return a.id !== id; });
+        localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(filtered));
+    }
+    
+    function getActivityStats() {
+        var activities = getActivities();
+        var stats = {};
+        activities.forEach(function(a) {
+            if (!stats[a.type]) stats[a.type] = 0;
+            stats[a.type]++;
+        });
+        return stats;
+    }
+    
+    function isActivityAllowed(activityType, username) {
+        var activities = getActivities();
+        var today = new Date().toISOString().split('T')[0];
+        var todayActivities = activities.filter(function(a) {
+            return a.user === username && a.type === activityType && a.timestamp.startsWith(today);
+        });
+        var limits = {
+            'voucher_generated': 100,
+            'voucher_exported': 50,
+            'cash_in_requested': 10
+        };
+        return todayActivities.length < (limits[activityType] || 1000);
+    }
+    
+    return {
+        init: init,
+        validatePassword: validatePassword,
+        createPassword: createPassword,
+        logActivity: logActivity,
+        getActivities: getActivities,
+        getActivitiesByUser: getActivitiesByUser,
+        getActivitiesByType: getActivitiesByType,
+        clearActivities: clearActivities,
+        deleteActivity: deleteActivity,
+        getActivityStats: getActivityStats,
+        isActivityAllowed: isActivityAllowed
+    };
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    ActivitiesDB.init();
+});
+</script>
+     <script>
+var vouchers = [];
+var usedCodes = {};
+
+function logout() {
+     sessionStorage.removeItem('authenticated');
+     sessionStorage.removeItem('username');
+     localStorage.removeItem('card_promoCardContent');
+     localStorage.removeItem('card_cashInCardContent');
+     localStorage.removeItem('card_portalKeyCardContent');
+     window.location.href = 'login.html';
+}
+
+function buyPromo() {
+     var users = JSON.parse(localStorage.getItem('users') || '{}');
+     if (users[username] && typeof users[username] === 'object') {
+         var promoPrice = parseInt(localStorage.getItem('promoPrice') || '30');
+         var balance = users[username].balance || 0;
+         if (balance < promoPrice) {
+             document.getElementById('promoError').textContent = 'Insufficient balance. You need ' + promoPrice + ' pesos to buy Voucher Generator access.';
+             document.getElementById('promoError').style.display = 'block';
+             return;
+         }
+         
+         users[username].balance = balance - promoPrice;
+         
+         var exp = users[username].expiration;
+         var expDate = exp ? new Date(exp) : new Date();
+         var today = new Date();
+         today.setHours(0, 0, 0, 0);
+         
+         if (exp && expDate >= today) {
+             var newExp = new Date(expDate.getFullYear(), expDate.getMonth() + 1, expDate.getDate());
+         } else {
+             var newExp = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+         }
+         users[username].expiration = newExp.toISOString().split('T')[0];
+         
+localStorage.setItem('users', JSON.stringify(users));
+           localStorage.setItem('account_locked_' + username, 'false');
+           
+var promoHistory = JSON.parse(localStorage.getItem('promoHistory') || '[]');
+            promoHistory.push({ username: username, price: promoPrice, date: new Date().toISOString() });
+            localStorage.setItem('promoHistory', JSON.stringify(promoHistory));
+            
+            ActivitiesDB.logActivity('promo_purchased', 'Purchased Voucher Generator access', { price: promoPrice });
+            
+            document.getElementById('promoError').style.display = 'none';
+            document.getElementById('voucherForm').style.display = 'block';
+            document.getElementById('vouchersHeader').style.display = 'block';
+            document.getElementById('vouchersContent').style.display = 'block';
+            document.getElementById('expiredNotice').style.display = 'none';
+ document.getElementById('promoCard').style.display = 'none';
+ alert('Voucher Generator access purchased! You now have 1 month access.');
+            loadPromoHistory();
+           location.reload();
+      }
+ }
+ 
+function requestPortalKey() {
+     var users = JSON.parse(localStorage.getItem('users') || '{}');
+     if (users[username] && typeof users[username] === 'object') {
+         var portalKeyPrice = parseInt(localStorage.getItem('portalKeyPrice') || '50');
+         var balance = users[username].balance || 0;
+         if (balance < portalKeyPrice) {
+             document.getElementById('portalKeyError').textContent = 'Insufficient balance. You need ' + portalKeyPrice + ' pesos to buy a PortalKey.';
+             document.getElementById('portalKeyError').style.display = 'block';
+             return;
+         }
+         
+         var serialNumber = prompt('Enter your MikroTik Serial Number:', '');
+         if (!serialNumber) {
+             document.getElementById('portalKeyError').textContent = 'Serial number is required.';
+             document.getElementById('portalKeyError').style.display = 'block';
+             return;
+         }
+         
+         var portalKey = generatePortalKeyFromSerial(serialNumber.trim());
+         if (!portalKey) {
+             document.getElementById('portalKeyError').textContent = 'Invalid serial number.';
+             document.getElementById('portalKeyError').style.display = 'block';
+             return;
+         }
+         
+         users[username].balance = balance - portalKeyPrice;
+         
+         var portalKeys = JSON.parse(localStorage.getItem('portalKeys') || '{}');
+         if (!portalKeys[username]) {
+             portalKeys[username] = [];
+         }
+         portalKeys[username].push({ code: portalKey, serial: serialNumber.trim(), date: new Date().toISOString() });
+         localStorage.setItem('portalKeys', JSON.stringify(portalKeys));
+         
+var requests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+          requests.push({ 
+              username: username, 
+              serialNumber: serialNumber.trim(),
+              portalKey: portalKey,
+              status: 'approved', 
+              date: new Date().toISOString() 
+          });
+          localStorage.setItem('portalKeyRequests', JSON.stringify(requests));
+          localStorage.setItem('users', JSON.stringify(users));
+          
+          ActivitiesDB.logActivity('portalkey_purchased', 'Purchased PortalKey', { serialNumber: serialNumber.trim(), portalKey: portalKey });
+          
+          document.getElementById('portalKeyError').style.display = 'none';
+          document.getElementById('portalKeySuccess').textContent = 'PortalKey generated successfully!';
+         document.getElementById('portalKeySuccess').style.display = 'block';
+         loadPortalKeyRequests();
+         
+         setTimeout(function() {
+             document.getElementById('portalKeySuccess').style.display = 'none';
+         }, 3000);
+     }
+ }
+ 
+ function generatePortalKeyFromSerial(serial) {
+     if (!serial || serial.trim() === '') return null;
+     
+     var serialTrimmed = serial.trim().toUpperCase();
+     var hash = 0;
+     for (var i = 0; i < serialTrimmed.length; i++) {
+         var char = serialTrimmed.charCodeAt(i);
+         hash = ((hash << 5) - hash) + char;
+         hash = hash & hash;
+     }
+     hash = Math.abs(hash);
+     
+     var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+     var result = '';
+     var seed = hash;
+     
+     for (var i = 0; i < 20; i++) {
+         seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+         result += chars.charAt(seed % chars.length);
+     }
+     
+     return result.substring(0, 5) + '-' + 
+            result.substring(5, 10) + '-' + 
+            result.substring(10, 15) + '-' + 
+            result.substring(15, 20);
+ }
+ 
+ function loadPortalKeyRequests() {
+     var requests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+     var userRequests = requests.filter(function(r) { return r.username === username; });
+     var list = document.getElementById('portalKeyList');
+     
+     if (userRequests.length === 0) {
+         list.innerHTML = '';
+         return;
+     }
+     
+var html = '<span style="color:#aaa;font-size:14px;margin-bottom:10px;display:block;">Your PortalKeys:</span>';
+      for (var i = 0; i < userRequests.length; i++) {
+          var req = userRequests[i];
+          var keyInfo = req.portalKey ? req.portalKey : '';
+          html += '<div style="background:#1e2430;padding:10px;border-radius:5px;margin-bottom:5px;"><span style="color:#fff;font-size:12px;">Serial: ' + req.serialNumber + '</span><span style="color:#28a745;float:right;font-weight:bold;font-size:12px;">PURCHASED</span>';
+          if (keyInfo) {
+              html += '<div style="margin-top:5px;"><span style="color:#fff;font-family:monospace;font-size:14px;">PortalKey: ' + keyInfo + '</span><button onclick="copyPortalKey(\'' + keyInfo + '\')" style="background:#485460;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:12px;margin-left:10px;">Copy</button></div>';
+          }
+          html += '<br><span style="color:#aaa;font-size:11px;">' + new Date(req.date).toLocaleString() + '</span></div>';
+      }
+      list.innerHTML = html;
+  }
+  
+  function loadPromoHistory() {
+      var history = JSON.parse(localStorage.getItem('promoHistory') || '[]');
+      var userHistory = history.filter(function(h) { return h.username === username; });
+      var list = document.getElementById('promoHistoryList');
+      
+      if (userHistory.length === 0) {
+          list.innerHTML = '';
+          return;
+      }
+      
+var html = '<span style="color:#aaa;font-size:14px;margin-bottom:10px;display:block;">Your Voucher Generator Purchases:</span>';
+       for (var i = 0; i < userHistory.length; i++) {
+           var h = userHistory[i];
+           html += '<div style="background:#1e2430;padding:10px;border-radius:5px;margin-bottom:5px;"><span style="color:#28a745;font-size:12px;">1 month access</span><span style="color:#aaa;float:right;font-size:12px;">' + h.price + ' pesos</span><br><span style="color:#aaa;font-size:11px;">' + new Date(h.date).toLocaleString() + '</span></div>';
+       }
+      list.innerHTML = html;
+  }
+  
+  function copyPortalKey(code) {
+      navigator.clipboard.writeText(code).then(function() { 
+          alert('PortalKey copied: ' + code); 
+      });
+  }
+ 
+ function copyNumber() {
+     navigator.clipboard.writeText('09659067723').then(function() { 
+         alert('Number copied to clipboard!'); 
+     });
+ }
+ 
+ function toggleCard(contentId, toggleId) {
+     var content = document.getElementById(contentId);
+     var toggleLink = document.getElementById(toggleId);
+     if (content.style.display === 'none') {
+         content.style.display = 'block';
+         toggleLink.textContent = 'Hide';
+         localStorage.setItem('card_' + contentId, 'shown');
+     } else {
+         content.style.display = 'none';
+         toggleLink.textContent = 'Show';
+         localStorage.setItem('card_' + contentId, 'hidden');
+     }
+ }
+ 
+ document.getElementById('cashInForm').addEventListener('submit', function(e) {
+     e.preventDefault();
+     var refNumber = document.getElementById('refNumber').value.trim();
+     var errorDiv = document.getElementById('cashInError');
+     var successDiv = document.getElementById('cashInSuccess');
+     errorDiv.style.display = 'none';
+     successDiv.style.display = 'none';
+     
+if (!refNumber) {
+          errorDiv.textContent = 'Please enter a reference number';
+          errorDiv.style.display = 'block';
+          return;
+      }
+      
+      var cashInAmount = parseInt(document.getElementById('cashInAmount').value) || 30;
+      if (cashInAmount <= 0) {
+          errorDiv.textContent = 'Please enter a valid amount';
+          errorDiv.style.display = 'block';
+          return;
+      }
+      
+var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+      requests.push({ 
+          username: username, 
+          refNumber: refNumber,
+          amount: cashInAmount,
+          status: 'pending', 
+          date: new Date().toISOString() 
+      });
+      localStorage.setItem('cashInRequests', JSON.stringify(requests));
+      
+      sendTelegramNotification(username, refNumber, cashInAmount);
+      
+successDiv.textContent = 'Request submitted! Waiting for admin approval.';
+      successDiv.style.display = 'block';
+      document.getElementById('cashInForm').reset();
+      ActivitiesDB.logActivity('cash_in_requested', 'Submitted cash-in request', { refNumber: refNumber, amount: cashInAmount });
+      loadUserRequests();
+  });
+ 
+ function loadUserRequests() {
+     var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+     var userRequests = requests.filter(function(r) { return r.username === username; });
+     var list = document.getElementById('userRequestsList');
+     
+     if (userRequests.length === 0) {
+         list.innerHTML = '';
+         return;
+     }
+     
+var html = '<span style="color:#aaa;font-size:14px;margin-bottom:10px;display:block;">Your requests:</span>';
+for (var i = 0; i < userRequests.length; i++) {
+           var req = userRequests[i];
+           var statusColor = req.status === 'pending' ? '#aaa' : (req.status === 'approved' ? '#28a745' : '#dc3545');
+           var displayAmount = req.approvedAmount || req.amount;
+           var amountInfo = displayAmount ? 'Amount: ' + displayAmount + ' pesos | ' : '';
+           html += '<div style="background:#1e2430;padding:10px;border-radius:5px;margin-bottom:5px;"><span style="color:#fff;font-size:12px;">Ref: ' + req.refNumber + '</span><span style="color:' + statusColor + ';float:right;font-weight:bold;font-size:12px;">' + req.status.toUpperCase() + '</span><br><span style="color:#aaa;font-size:11px;">' + amountInfo + new Date(req.date).toLocaleString() + '</span></div>';
+       }
+list.innerHTML = html;
+  }
+  
+  function sendTelegramNotification(userName, refNum, amt) {
+      var telegramToken = localStorage.getItem('telegramBotToken') || '';
+      var telegramChatId = localStorage.getItem('telegramChatId') || '';
+      
+      if (!telegramToken || !telegramChatId) return;
+      
+      var message = '🔔 Cash-In Request\nUser: ' + userName + '\nRef: ' + refNum + '\nAmount: ' + amt + ' pesos';
+      var url = 'https://api.telegram.org/bot' + telegramToken + '/sendMessage?chat_id=' + telegramChatId + '&text=' + encodeURIComponent(message);
+      
+      var img = new Image();
+      img.src = url;
+  }
+  
+  function generateVoucherCode(prefix) {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var length = parseInt(document.getElementById('length').value) || 4;
+    var remainingLength = length - prefix.length;
+    if (remainingLength < 0) remainingLength = 0;
+    var attempts = 0;
+    var maxAttempts = 100;
+    while (attempts < maxAttempts) {
+        var code = prefix;
+        for (var i = 0; i < remainingLength; i++) {
+            code = code + chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        if (!usedCodes[code]) {
+            usedCodes[code] = true;
+            return code;
+        }
+        attempts++;
+    }
+    throw new Error('Could not generate unique voucher code after ' + maxAttempts + ' attempts');
+}
+        function formatMikroTikTimestamp(minutes) {
+            var futureDate = new Date();
+            futureDate.setMinutes(futureDate.getMinutes() + minutes);
+            return Math.floor(futureDate.getTime() / 1000);
+        }
+function generateMikroTikScript() {
+             if (vouchers.length === 0) { alert('No vouchers to export'); return; }
+             var script = '';
+             for (var i = 0; i < vouchers.length; i++) {
+                 var v = vouchers[i];
+                 var expiry = formatMikroTikTimestamp(v.validity);
+                 var profileParam = v.profile ? ' profile=' + v.profile : '';
+                 script = script + '/ip hotspot user add name=' + v.code + ' limit-uptime=' + v.time + 'm' + profileParam + ' comment=' + v.validity + 'm,' + v.amount + ',0,' + v.code + ' disabled=no\n';
+             }
+             return script;
+         }
+function exportToScript() {
+               if (vouchers.length === 0) { alert('No vouchers to export'); return; }
+               var script = generateMikroTikScript();
+               var timestamp = new Date().getTime().toString().slice(-6);
+               var randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+               var filename = 'vouchers-' + timestamp + '-' + randomNum + '.rsc';
+               var blob = new Blob([script], { type: 'text/plain' });
+               var url = URL.createObjectURL(blob);
+               var a = document.createElement('a');
+               a.href = url;
+               a.download = filename;
+               a.click();
+               URL.revokeObjectURL(url);
+               document.getElementById('exportButtons').style.display = 'block';
+               ActivitiesDB.logActivity('voucher_exported', 'Exported to RSC file', { count: vouchers.length, format: 'rsc' });
+               alert('Script exported! Import this file into MikroTik: /import ' + filename);
+           }
+document.getElementById('voucherForm').addEventListener('submit', function(e) {
+              e.preventDefault();
+              var prefix = document.getElementById('prefix').value.trim();
+              var amount = document.getElementById('amount').value;
+var quantity = parseInt(document.getElementById('quantity').value) || 1;
+               var validity = parseInt(document.getElementById('validity').value) || 60;
+              var userProfile = document.getElementById('userProfile').value.trim();
+              var errorDiv = document.getElementById('error');
+              var successDiv = document.getElementById('success');
+              errorDiv.style.display = 'none';
+              successDiv.style.display = 'none';
+              document.getElementById('exportButtons').style.display = 'none';
+ if (!/^[A-Za-z]{1,2}$/.test(prefix)) {
+                   errorDiv.textContent = 'Prefix must be 1-2 letters only';
+                   errorDiv.style.display = 'block';
+                   return;
+               }
+               
+var length = parseInt(document.getElementById('length').value) || 6;
+               if (prefix.length > length) {
+                   errorDiv.textContent = 'Prefix length cannot exceed total voucher length';
+                   errorDiv.style.display = 'block';
+                   return;
+               }
+vouchers = [];
+                usedCodes = {};
+                var timeValue = parseInt(document.getElementById('time').value) || 1;
+               var profileValue = userProfile || '';
+               for (var i = 0; i < quantity; i++) {
+                   vouchers.push({ code: generateVoucherCode(prefix), amount: parseInt(amount) || 5, validity: validity, time: timeValue, profile: profileValue });
+               }
+               displayVouchers();
+               ActivitiesDB.logActivity('voucher_generated', 'Generated ' + quantity + ' voucher(s)', { quantity: quantity, prefix: prefix });
+               successDiv.textContent = quantity + ' voucher(s) generated successfully!';
+               successDiv.style.display = 'block';
+           });
+function formatTimeForDisplay(minutes) {
+              if (minutes >= 1440) {
+                  var days = Math.floor(minutes / 1440);
+                  return days + 'day' + (days > 1 ? 's' : '');
+              } else if (minutes >= 60) {
+                  var hours = Math.floor(minutes / 60);
+                  return hours + 'h' + (hours > 1 ? 's' : '');
+              }
+              return minutes + 'm';
+          }
+         
+         function displayVouchers() {
+              var list = document.getElementById('voucherList');
+              list.innerHTML = '';
+              for (var i = 0; i < vouchers.length; i++) {
+                  var v = vouchers[i];
+                  var div = document.createElement('div');
+                  div.className = 'voucher-item';
+                  var profileText = v.profile ? v.profile : 'default';
+                  var timeDisplay = formatTimeForDisplay(v.time);
+                  var validityDisplay = formatTimeForDisplay(v.validity);
+                  div.innerHTML = '<div class="voucher-top"><span class="voucher-code">' + v.code + '</span><button class="copy-btn" onclick="copyCode(\'' + v.code + '\')">Copy</button></div><div class="voucher-top"><span class="voucher-amount">' + v.amount.toLocaleString() + '</span><span class="voucher-validity">' + timeDisplay + ' time, ' + validityDisplay + ' validity</span></div><div class="voucher-top"><span style="color:#aaa;font-size:12px;">Profile: ' + profileText + '</span></div>';
+                  list.appendChild(div);
+              }
+          }
+        function copyCode(code) {
+            navigator.clipboard.writeText(code).then(function() { alert('Copied: ' + code); });
+        }
+function copyAllCodes() {
+              if (vouchers.length === 0) { alert('No vouchers to copy'); return; }
+              var codes = [];
+              for (var i = 0; i < vouchers.length; i++) {
+                  var v = vouchers[i];
+                  var profileText = v.profile ? v.profile : 'default';
+                  var timeDisplay = formatTimeForDisplay(v.time);
+                  var validityDisplay = formatTimeForDisplay(v.validity);
+                  codes.push(v.code + ' - ' + v.amount.toLocaleString() + ' (' + timeDisplay + ' time, ' + validityDisplay + ' validity, Profile: ' + profileText + ')');
+              }
+              navigator.clipboard.writeText(codes.join('\n')).then(function() { alert('All codes copied to clipboard!'); });
+          }
+function exportToCSV() {
+               if (vouchers.length === 0) { alert('No vouchers to export'); return; }
+               var csv = 'Code,Amount,Validity (Minutes),Time (Minutes),Profile\n';
+               for (var i = 0; i < vouchers.length; i++) {
+                   var v = vouchers[i];
+                   var profileText = v.profile ? v.profile : 'default';
+                   csv = csv + v.code + ',' + v.amount + ',' + v.validity + ',' + v.time + ',' + profileText + '\n';
+               }
+               var timestamp = new Date().getTime().toString().slice(-6);
+               var randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+               var filename = 'vouchers-' + timestamp + '-' + randomNum + '.csv';
+               var blob = new Blob([csv], { type: 'text/csv' });
+               var url = URL.createObjectURL(blob);
+               var a = document.createElement('a');
+               a.href = url;
+               a.download = filename;
+               a.click();
+               URL.revokeObjectURL(url);
+               ActivitiesDB.logActivity('voucher_exported', 'Exported to CSV file', { count: vouchers.length, format: 'csv' });
+           }
+         function exportToPDF() {
+             if (vouchers.length === 0) { alert('No vouchers to export'); return; }
+             
+             // Create new jsPDF instance
+             const { jsPDF } = window.jspdf;
+             const doc = new jsPDF();
+             
+             var template = document.getElementById('template').value;
+             
+             // Set up margins (0.12mm on all sides)
+             const margin = 0.12; // mm
+             let startX = margin; // Left margin
+             let startY = margin; // Top margin
+             
+             // Page dimensions (A4: 210mm x 297mm)
+             const pageWidth = 210;
+             const pageHeight = 297;
+             
+             // Calculate usable area (subtracting margins)
+             const usableWidth = pageWidth - 2 * margin;
+             const usableHeight = pageHeight - 2 * margin;
+             
+             // Voucher dimensions
+             const voucherWidth = 28;  // Width of each voucher in mm
+             const voucherHeight = 18; // Height of each voucher in mm
+             const gapBetween = 2;     // Gap between vouchers
+             
+             // Calculate how many vouchers fit per row/column
+             const vouchersPerRow = Math.floor((usableWidth + gapBetween) / (voucherWidth + gapBetween));
+             const vouchersPerColumn = Math.floor((usableHeight + gapBetween) / (voucherHeight + gapBetween));
+             
+             for (var i = 0; i < vouchers.length; i++) {
+                 var v = vouchers[i];
+                 
+                 // Add new page if needed (but only after filling current page)
+                 if (i > 0 && i % (vouchersPerRow * vouchersPerColumn) === 0) {
+                     doc.addPage();
+                 }
+                 
+                 // Calculate position within current page
+                 const indexInPage = i % (vouchersPerRow * vouchersPerColumn);
+                 const row = Math.floor(indexInPage / vouchersPerRow);
+                 const col = indexInPage % vouchersPerRow;
+                 
+                 let currentX = startX + col * (voucherWidth + gapBetween);
+                 let currentY = startY + row * (voucherHeight + gapBetween);
+                 
+// Apply template-specific styling
+                  if (template === 'template2') {
+                     // Modern Template
+                     doc.setDrawColor(74, 144, 226); // #4a90e2
+                     doc.setFillColor(240, 248, 255); // #f0f8ff
+                     doc.rect(currentX, currentY, voucherWidth, voucherHeight, 'FD');
+                     
+                     // Amount box
+                     doc.setDrawColor(74, 144, 226);
+                     doc.setFillColor(74, 144, 226);
+                     doc.setTextColor(255, 255, 255);
+                     doc.rect(currentX, currentY, 6, voucherHeight, 'FD'); // Rotated amount box (approximate)
+                     
+                     // Voucher box
+                     doc.setFillColor(255, 255, 255);
+                     doc.rect(currentX + 6, currentY, voucherWidth - 6, voucherHeight, 'F');
+                     
+                     // Text
+                     var hotspotName = document.getElementById('hotspotName').value || 'MikroTik Hotspot';
+                     doc.setTextColor(30, 58, 95); // #1e3a5f
+                     doc.setFontSize(6);
+                     doc.text(hotspotName, currentX + 8, currentY + 5);
+                     doc.setFontSize(8);
+                     doc.text(v.code, currentX + 8, currentY + 10);
+doc.setFontSize(5);
+                       doc.text(`Time: ${formatTimeForDisplay(v.time)}`, currentX + 8, currentY + 13);
+                       doc.text(`Valid: ${formatTimeForDisplay(v.validity)}`, currentX + 8, currentY + 15);
+                    
+                 } else if (template === 'template3') {
+                     // Classic Template
+                     doc.setDrawColor(139, 69, 19); // #8b4513
+                     doc.setFillColor(255, 248, 220); // #fff8dc
+                     doc.rect(currentX, currentY, voucherWidth, voucherHeight, 'FD');
+                     
+                     // Amount box
+                     doc.setDrawColor(139, 69, 19);
+                     doc.setFillColor(139, 69, 19);
+                     doc.setTextColor(245, 222, 179); // #f5deb3
+                     doc.rect(currentX, currentY, 6, voucherHeight, 'FD'); // Rotated amount box
+                     
+                     // Voucher box
+                     doc.setFillColor(255, 255, 255);
+                     doc.rect(currentX + 6, currentY, voucherWidth - 6, voucherHeight, 'F');
+                     
+                     // Text
+                     var hotspotName = document.getElementById('hotspotName').value || 'MikroTik Hotspot';
+                     doc.setTextColor(93, 64, 55); // #5d4037
+                     doc.setFontSize(5);
+                     doc.text(hotspotName, currentX + 8, currentY + 4);
+                     doc.setFontSize(7);
+                     doc.text(v.code, currentX + 8, currentY + 8);
+doc.setFontSize(4);
+                       doc.text(`Time: ${formatTimeForDisplay(v.time)}`, currentX + 8, currentY + 11);
+                       doc.text(`Valid: ${formatTimeForDisplay(v.validity)}`, currentX + 8, currentY + 13);
+                    
+                 } else {
+                     // Standard Template (default) - Updated to match juanfiman design
+                     doc.setDrawColor(181, 181, 181); // #b5b5b5
+                     doc.setFillColor(248, 248, 248); // #f8f8f8
+                     doc.rect(currentX, currentY, voucherWidth, voucherHeight, 'FD');
+                     
+                     // Amount box
+                     doc.setDrawColor(181, 181, 181);
+                     doc.setFillColor(220, 220, 220);
+                     doc.setTextColor(0, 0, 0);
+                     doc.rect(currentX, currentY, 6, voucherHeight, 'FD'); // Rotated amount box
+                     
+                     // Voucher box
+                     doc.setFillColor(255, 255, 255);
+                     doc.rect(currentX + 6, currentY, voucherWidth - 6, voucherHeight, 'F');
+                     
+                     // Text - Matching juanfiman design
+                     var hotspotName = document.getElementById('hotspotName').value || 'MikroTik Hotspot';
+                     doc.setTextColor(42, 42, 42); // rgb(42, 42, 42) for hotspot name
+                     doc.setFontSize(5);
+                     doc.text(hotspotName, currentX + 8, currentY + 4); // hotspotName
+                     doc.setFontSize(7);
+                     doc.setTextColor(255, 0, 0); // rgb(255, 0, 0) for voucher code
+                     doc.text(v.code, currentX + 8, currentY + 8); // voucherCode
+doc.setFontSize(4);
+                       doc.setTextColor(0, 0, 0);
+                       doc.text(`Time: ${formatTimeForDisplay(v.time)}`, currentX + 8, currentY + 11); // voucherData
+                       doc.text(`Valid: ${formatTimeForDisplay(v.validity)}`, currentX + 8, currentY + 13); // validity
+                 }
+                
+                // Amount text (rotated - simplified representation)
+                doc.setTextColor(0, 0, 0);
+                doc.setFontSize(4);
+                doc.text(`P ${v.amount.toLocaleString()}`, currentX + 1, currentY + 4); // Simplified rotated text
+}
+              
+// Save the PDF
+               var timestamp = new Date().getTime().toString().slice(-6);
+               var randomNum = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+               var filename = 'vouchers-' + timestamp + '-' + randomNum + '.pdf';
+               doc.save(filename);
+               ActivitiesDB.logActivity('voucher_exported', 'Exported to PDF file', { count: vouchers.length, format: 'pdf' });
+          }
+    </script>
+</body>
+</html>

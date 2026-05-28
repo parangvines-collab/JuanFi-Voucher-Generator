@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - MikroTik Voucher Generator</title>
+<style>
+         * { box-sizing: border-box; margin: 0; padding: 0; }
+         body { font-family: Arial, Helvetica, sans-serif; background-color: #3d4044; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+         .login-container { max-width: 400px; width: 100%; padding: 0 15px; }
+         .card { background-color: #191e2d; border-radius: 5px; padding: 30px; box-shadow: 0 0 2px #000; }
+         .form-group { margin: 15px 0; }
+         label { display: block; margin: 5px 0; font-size: 14px; color: #fff; }
+         input { width: 100%; padding: 12px; background-color: #191e2d; border: 2px solid #485460; border-radius: 5px; color: white; font-size: 16px; }
+         input:focus { outline: none; border-color: dodgerblue; }
+         .btn { background-color: #28a745; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 15px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 20px; }
+         .btn:hover { background-color: #218838; }
+         .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+         .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+         .link { text-align: center; margin-top: 20px; }
+         .link a { color: dodgerblue; text-decoration: none; }
+         .link a:hover { text-decoration: underline; }
+         .checkbox-container { display: flex; align-items: center; margin-top: 5px; }
+         .checkbox-container input[type="checkbox"] { width: auto; margin-right: 8px; }
+         .checkbox-container label { color: #aaa; font-size: 12px; margin: 0; }
+     </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="card">
+            <h1 style="text-align: center; color: #fff;">Register</h1>
+            <div id="error" class="error"></div>
+            <div id="success" class="success"></div>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="newUsername">Username</label>
+                    <input type="text" id="newUsername" name="newUsername" placeholder="Enter username" required minlength="3">
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Password</label>
+                    <input type="password" id="newPassword" name="newPassword" placeholder="Enter password" required minlength="6">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="showNewPassword" onchange="togglePassword('newPassword')">
+                        <label for="showNewPassword">Show Password</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm password" required minlength="6">
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="showConfirmPassword" onchange="togglePassword('confirmPassword')">
+                        <label for="showConfirmPassword">Show Password</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Register</button>
+            </form>
+            <div class="link">
+                <a href="login.html">Already have an account? Login</a>
+            </div>
+        </div>
+    </div>
+<script>
+var ActivitiesDB = (function() {
+    var ACTIVITIES_KEY = 'voucherActivities';
+    var PASSWORD_KEY = 'appPassword';
+    
+    function init() {
+        if (!localStorage.getItem(PASSWORD_KEY)) {
+            var array = new Uint8Array(16);
+            window.crypto.getRandomValues(array);
+            var salt = Array.from(array, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+            var saltedPassword = 'admin123' + salt;
+            var hash = 0;
+            for (var i = 0; i < saltedPassword.length; i++) {
+                var char = saltedPassword.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            var hashStr = (hash >>> 0).toString(16);
+            localStorage.setItem(PASSWORD_KEY, JSON.stringify({ hash: hashStr, salt: salt }));
+        }
+        if (!localStorage.getItem(ACTIVITIES_KEY)) {
+            localStorage.setItem(ACTIVITIES_KEY, JSON.stringify([]));
+        }
+    }
+    
+    function logActivity(type, description, details) {
+        var activities = JSON.parse(localStorage.getItem(ACTIVITIES_KEY) || '[]');
+        activities.push({
+            id: Date.now() + Math.random().toString(36).substr(2, 5),
+            type: type,
+            user: details && details.username ? details.username : 'anonymous',
+            description: description,
+            details: details || {},
+            timestamp: new Date().toISOString()
+        });
+        localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities));
+    }
+    
+    function getActivities() {
+        return JSON.parse(localStorage.getItem(ACTIVITIES_KEY) || '[]');
+    }
+    
+    return {
+        init: init,
+        logActivity: logActivity,
+        getActivities: getActivities
+    };
+})();
+
+document.addEventListener('DOMContentLoaded', function() {
+    ActivitiesDB.init();
+});
+
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+             e.preventDefault();
+             var newUsername = document.getElementById('newUsername').value.trim();
+             var newPassword = document.getElementById('newPassword').value;
+             var confirmPassword = document.getElementById('confirmPassword').value;
+             var errorDiv = document.getElementById('error');
+             var successDiv = document.getElementById('success');
+             errorDiv.style.display = 'none';
+             successDiv.style.display = 'none';
+ 
+             if (newPassword !== confirmPassword) {
+                 errorDiv.textContent = 'Passwords do not match';
+                 errorDiv.style.display = 'block';
+                 return;
+             }
+ 
+             if (newUsername.length < 3) {
+                 errorDiv.textContent = 'Username must be at least 3 characters';
+                 errorDiv.style.display = 'block';
+                 return;
+             }
+ 
+             if (newUsername === 'admin') {
+                 errorDiv.textContent = 'Username "admin" is reserved';
+                 errorDiv.style.display = 'block';
+                 return;
+             }
+ 
+             var users = JSON.parse(localStorage.getItem('users') || '{}');
+             
+             if (users[newUsername]) {
+                 errorDiv.textContent = 'Username already exists';
+                 errorDiv.style.display = 'block';
+                 return;
+             }
+ 
+             users[newUsername] = { password: newPassword, expiration: '', balance: 0 };
+             localStorage.setItem('users', JSON.stringify(users));
+             
+             ActivitiesDB.logActivity('user_registered', 'New user registered', { username: newUsername });
+ 
+             successDiv.textContent = 'Account created successfully! Redirecting to login...';
+             successDiv.style.display = 'block';
+             document.getElementById('registerForm').reset();
+             
+             setTimeout(function() {
+                 window.location.href = 'login.html';
+             }, 2000);
+         });
+
+if (sessionStorage.getItem('authenticated') === 'true') {
+             window.location.href = 'index.html';
+         }
+         
+function togglePassword(fieldId) {
+              var pwd = document.getElementById(fieldId);
+              if (fieldId === 'newPassword') {
+                  pwd.type = document.getElementById('showNewPassword').checked ? 'text' : 'password';
+              } else if (fieldId === 'confirmPassword') {
+                  pwd.type = document.getElementById('showConfirmPassword').checked ? 'text' : 'password';
+              }
+          }
+     </script>
+</body>
+</html>

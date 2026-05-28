@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>Account Manager - MikroTik Voucher Generator</title>
+     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; background-color: #3d4044; }
+        .container { max-width: 400px; width: 100%; margin: 30px auto 0 auto; padding: 0 15px 30px 15px; }
+        .card { background-color: #191e2d; border-radius: 5px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 2px #000; }
+        h1 { color: #fff; text-align: center; margin: 40px 0 20px 0; font-size: 2em; }
+        h3 { color: #fff; margin-bottom: 15px; }
+        .form-group { margin: 10px 0; }
+        label { display: block; margin: 5px 0; font-size: 14px; color: #fff; }
+        input { width: 100%; padding: 10px; background-color: #191e2d; border: 2px solid #485460; border-radius: 5px; color: white; font-size: 16px; }
+        input:focus { outline: none; border-color: dodgerblue; }
+        .btn { background-color: dodgerblue; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 15px; cursor: pointer; width: 100%; font-weight: 600; margin-top: 10px; }
+        .btn:hover { background-color: royalblue; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-secondary { background-color: #485460; }
+        .btn-secondary:hover { background-color: #3a4550; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .user-item { background: #1e2430; border: 1px solid #485460; border-radius: 5px; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .user-item span { color: white; }
+        .user-item button { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        .link { text-align: center; margin-top: 20px; }
+        .link a { color: dodgerblue; text-decoration: none; font-size: 14px; }
+        .link a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+<h1>Account Manager <button onclick="logout()" style="float:right;background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:14px;">Logout</button></h1>
+          
+<div class="card">
+              <h3>Promo Settings <small style="color:#aaa;font-size:12px;">Price: <span id="promoPriceDisplay" style="color:#28a745;">30</span> pesos <button onclick="editPromoPrice()" style="background:#485460;color:white;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:10px;margin-left:5px;">Edit</button></small></h3>
+              <span style="color:#aaa;font-size:14px;">Purchase access to voucher generator. Grants 1 month access.</span>
+</div>
+ 
+ <div class="card">
+              <h3>Telegram Notifications</h3>
+              <span style="color:#aaa;font-size:14px;">Configure Telegram to receive cash-in request notifications.</span>
+              <div id="telegramError" class="error"></div>
+              <div id="telegramSuccess" class="success"></div>
+              <div class="form-group">
+                  <label for="telegramBotToken">Bot Token</label>
+                  <input type="password" id="telegramBotToken" placeholder="Enter Telegram Bot Token">
+              </div>
+              <div class="form-group">
+                  <label for="telegramChatId">Chat ID</label>
+                  <input type="text" id="telegramChatId" placeholder="Enter Telegram Chat ID">
+              </div>
+              <button onclick="saveTelegramSettings()" class="btn" style="width:auto;padding:8px 16px;font-size:14px;">Save Settings</button>
+              <button onclick="testTelegramNotification()" class="btn" style="background:#28a745;width:auto;padding:8px 16px;font-size:14px;margin-left:10px;">Test</button>
+          </div>
+ 
+          <div class="card">
+             <h3>Change Admin Password</h3>
+            <div id="changePassError" class="error"></div>
+            <div id="changePassSuccess" class="success"></div>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password</label>
+                    <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter current password" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" name="newPassword" placeholder="Enter new password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmNewPassword">Confirm New Password</label>
+                    <input type="password" id="confirmNewPassword" name="confirmNewPassword" placeholder="Confirm new password" required minlength="6">
+                </div>
+                <button type="submit" class="btn">Change Password</button>
+            </form>
+        </div>
+
+<div class="card">
+             <h3>Registered Accounts</h3>
+             <span style="color:#aaa;font-size:14px;">View all registered users and their passwords. Click "Show" to reveal password.</span>
+             <div id="accountsError" class="error"></div>
+             <div id="accountsList"></div>
+             <span style="color:#aaa;font-size:11px;display:block;margin-top:10px;">Note: Admin account cannot be deleted.</span>
+         </div>
+
+<div class="card">
+              <h3>Cash-In Requests</h3>
+              <span style="color:#aaa;font-size:14px;">Manage user cash-in requests. Approve to add credit to user account.</span>
+              <button onclick="clearProcessedRequests()" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:12px;margin-top:10px;">Clear All Approved/Denied</button>
+              <div id="cashInError" class="error"></div>
+              <div id="cashInRequestsList"></div>
+          </div>
+ 
+<div class="card">
+                  <h3>PortalKey Purchases <small style="color:#aaa;font-size:12px;">Price: <span id="portalKeyPriceDisplay" style="color:#28a745;">50</span> pesos <button onclick="editPortalKeyPrice()" style="background:#485460;color:white;border:none;padding:2px 6px;border-radius:3px;cursor:pointer;font-size:10px;margin-left:5px;">Edit</button></small></h3>
+                  <span style="color:#aaa;font-size:14px;">View users who purchased PortalKeys. Keys are auto-generated based on MikroTik serial number.</span>
+                  <button onclick="clearPortalKeyRequests()" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:12px;margin-top:10px;">Clear All Records</button>
+                  <div id="portalKeyError" class="error"></div>
+                  <div id="portalKeyRequestsList"></div>
+              </div>
+
+<div class="card">
+                  <h3>Buy Voucher Generator History</h3>
+                  <span style="color:#aaa;font-size:14px;">View users who purchased Voucher Generator access (1 month).</span>
+                  <button onclick="clearPromoHistory()" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;font-size:12px;margin-top:10px;">Clear All Records</button>
+                  <div id="promoHistoryError" class="error"></div>
+                  <div id="promoHistoryList"></div>
+              </div>
+
+<div class="link">
+            <a href="index.html">Back to Voucher Generator</a> | <a href="activities.html">Activity Log</a>
+        </div>
+    </div>
+
+<script>
+var ActivitiesDB = (function() {
+    var ACTIVITIES_KEY = 'voucherActivities';
+    var PASSWORD_KEY = 'appPassword';
+    
+    function init() {
+        if (!localStorage.getItem(PASSWORD_KEY)) {
+            var array = new Uint8Array(16);
+            window.crypto.getRandomValues(array);
+            var salt = Array.from(array, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+            var saltedPassword = 'admin123' + salt;
+            var hash = 0;
+            for (var i = 0; i < saltedPassword.length; i++) {
+                var char = saltedPassword.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            var hashStr = (hash >>> 0).toString(16);
+            localStorage.setItem(PASSWORD_KEY, JSON.stringify({ hash: hashStr, salt: salt }));
+        }
+        if (!localStorage.getItem(ACTIVITIES_KEY)) {
+            localStorage.setItem(ACTIVITIES_KEY, JSON.stringify([]));
+        }
+    }
+    
+    function logActivity(type, description, details) {
+        var activities = JSON.parse(localStorage.getItem(ACTIVITIES_KEY) || '[]');
+        var user = sessionStorage.getItem('username') || 'admin';
+        activities.push({
+            id: Date.now() + Math.random().toString(36).substr(2, 5),
+            type: type,
+            user: user,
+            description: description,
+            details: details || {},
+            timestamp: new Date().toISOString()
+        });
+        localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(activities));
+    }
+    
+    return { init: init, logActivity: logActivity };
+})();
+
+document.addEventListener('DOMContentLoaded', function() { ActivitiesDB.init(); });
+
+if (sessionStorage.getItem('authenticated') !== 'true') { window.location.href = 'login.html'; }
+
+var currentUser = sessionStorage.getItem('username');
+if (!currentUser) { window.location.href = 'login.html'; }
+
+if (currentUser !== 'admin') {
+    alert('Only admin can access the account manager');
+    window.location.href = 'index.html';
+}
+
+function logout() { sessionStorage.removeItem('authenticated'); sessionStorage.removeItem('username'); window.location.href = 'login.html'; }
+
+function loadAccounts() {
+    var users = JSON.parse(localStorage.getItem('users') || '{}');
+    var list = document.getElementById('accountsList');
+    list.innerHTML = '';
+    
+    var div = document.createElement('div');
+    div.className = 'user-item';
+    div.innerHTML = '<span>admin</span><span><button onclick="toggleAdminPassword(this)">Show</button><button disabled style="opacity:0.5;cursor:not-allowed;">Delete</button></span><span style="color:#aaa;font-size:12px;display:block;">Expires: No expiration (permanent)</span>';
+    list.appendChild(div);
+    
+    for (var username in users) {
+        var div = document.createElement('div');
+        div.className = 'user-item';
+        var userData = users[username];
+        var exp = typeof userData === 'object' ? userData.expiration : '';
+        var balance = typeof userData === 'object' ? (userData.balance || 0) : 0;
+        div.innerHTML = '<span>' + username + '</span><span><button onclick="togglePassword(this, \'' + username + '\')" style="background:#485460;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;margin-right:5px;">Show</button><button onclick="editExpiration(\'' + username + '\', \'' + exp + '\')">Edit Exp</button><button onclick="editBalance(\'' + username + '\', ' + balance + ')">Edit Balance</button><button onclick="deleteUser(\'' + username + '\')">Delete</button></span><span style="color:#aaa;font-size:12px;display:block;">Expires: ' + exp + ' | Balance: ' + balance + '</span>';
+        list.appendChild(div);
+    }
+}
+
+function toggleAdminPassword(btn) {
+    var storedAdminPass = localStorage.getItem('adminPassword') || 'password';
+    if (btn.textContent === 'Show') { btn.textContent = storedAdminPass; btn.style.fontFamily = 'monospace'; }
+    else { btn.textContent = 'Show'; btn.style.fontFamily = ''; }
+}
+
+function togglePassword(btn, username) {
+    var users = JSON.parse(localStorage.getItem('users') || '{}');
+    var userData = users[username];
+    var password = typeof userData === 'object' ? userData.password : userData;
+    if (btn.textContent === 'Show') { btn.textContent = password; btn.style.fontFamily = 'monospace'; }
+    else { btn.textContent = 'Show'; btn.style.fontFamily = ''; }
+}
+
+function editExpiration(username, currentExp) {
+    var newExp = prompt('Enter new expiration date (YYYY-MM-DD):', currentExp);
+    if (!newExp) return;
+    var expDate = new Date(newExp);
+    if (isNaN(expDate.getTime())) { alert('Invalid date format'); return; }
+    var users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (typeof users[username] === 'object') { users[username].expiration = newExp; }
+    else { users[username] = { password: users[username], expiration: newExp }; }
+    localStorage.setItem('users', JSON.stringify(users));
+    localStorage.setItem('account_locked_' + username, 'false');
+    loadAccounts();
+    ActivitiesDB.logActivity('expiration_edited', 'Updated expiration for ' + username, { username: username, expiration: newExp });
+    alert('Expiration updated successfully');
+}
+
+function deleteUser(username) {
+    if (!confirm('Are you sure you want to delete user: ' + username + '?')) return;
+    var users = JSON.parse(localStorage.getItem('users') || '{}');
+    delete users[username];
+    localStorage.setItem('users', JSON.stringify(users));
+    loadAccounts();
+    ActivitiesDB.logActivity('user_deleted', 'Deleted user ' + username, { username: username });
+    alert('User deleted successfully');
+}
+
+function editBalance(username, currentBalance) {
+    var newBalance = prompt('Enter new balance for ' + username + ':', currentBalance);
+    if (newBalance === null) return;
+    var balanceNum = parseFloat(newBalance);
+    if (isNaN(balanceNum) || balanceNum < 0) { alert('Please enter a valid non-negative number'); return; }
+    var users = JSON.parse(localStorage.getItem('users') || '{}');
+    if (typeof users[username] === 'object') { users[username].balance = balanceNum; }
+    else { users[username] = { password: users[username], expiration: '', balance: balanceNum }; }
+    localStorage.setItem('users', JSON.stringify(users));
+    loadAccounts();
+    ActivitiesDB.logActivity('balance_edited', 'Updated balance for ' + username, { username: username, balance: balanceNum });
+    alert('Balance updated successfully');
+}
+
+document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var currentPassword = document.getElementById('currentPassword').value;
+    var newPassword = document.getElementById('newPassword').value;
+    var confirmNewPassword = document.getElementById('confirmNewPassword').value;
+    var errorDiv = document.getElementById('changePassError');
+    var successDiv = document.getElementById('changePassSuccess');
+    errorDiv.style.display = 'none';
+    successDiv.style.display = 'none';
+
+    if (newPassword !== confirmNewPassword) { errorDiv.textContent = 'New passwords do not match'; errorDiv.style.display = 'block'; return; }
+    if (newPassword.length < 6) { errorDiv.textContent = 'Password must be at least 6 characters'; errorDiv.style.display = 'block'; return; }
+
+    var storedAdminPass = localStorage.getItem('adminPassword') || 'password';
+    if (currentPassword !== storedAdminPass) { errorDiv.textContent = 'Current password is incorrect'; errorDiv.style.display = 'block'; return; }
+
+    localStorage.setItem('adminPassword', newPassword);
+    ActivitiesDB.logActivity('password_changed', 'Admin password changed');
+    successDiv.textContent = 'Admin password changed successfully';
+    successDiv.style.display = 'block';
+    document.getElementById('changePasswordForm').reset();
+});
+ 
+          function loadCashInRequests() {
+            var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+            var list = document.getElementById('cashInRequestsList');
+            list.innerHTML = '';
+            
+            var pendingRequests = requests.filter(function(r) { return r.status === 'pending'; });
+            var processedRequests = requests.filter(function(r) { return r.status !== 'pending'; });
+            
+            if (pendingRequests.length === 0 && processedRequests.length === 0) {
+                list.innerHTML = '<span style="color:#aaa;font-size:14px;">No cash-in requests found.</span>';
+                return;
+            }
+            
+for (var i = 0; i < pendingRequests.length; i++) {
+                 var req = pendingRequests[i];
+                 var div = document.createElement('div');
+                 div.className = 'user-item';
+                 var amountInfo = req.amount ? 'Amount: ' + req.amount + ' pesos<br>' : '';
+                 div.innerHTML = '<span>' + req.username + '<br><small style="color:#aaa;">Ref: ' + req.refNumber + '<br>' + amountInfo + '</small></span><span><button onclick="approveRequest(' + i + ')" style="background:#28a745;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;margin-right:5px;">Approve</button><button onclick="denyRequest(' + i + ')" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:3px;cursor:pointer;">Deny</button></span><span style="color:#aaa;font-size:12px;display:block;">' + new Date(req.date).toLocaleString() + '</span>';
+                 list.appendChild(div);
+             }
+             
+for (var j = 0; j < processedRequests.length; j++) {
+                  var req2 = processedRequests[j];
+                  var div2 = document.createElement('div');
+                  div2.className = 'user-item';
+                  var statusColor = req2.status === 'approved' ? '#28a745' : '#dc3545';
+                  var displayAmount = req2.approvedAmount || req2.amount;
+                  var amountInfo2 = displayAmount ? 'Amount: ' + displayAmount + ' pesos | ' : '';
+ div2.innerHTML = '<span>' + req2.username + '<br><small style="color:#aaa;">Ref: ' + req2.refNumber + '<br>' + amountInfo2 + '</small></span><span style="color:' + statusColor + ';font-weight:bold;">' + req2.status.toUpperCase() + '</span><span style="color:#aaa;font-size:12px;display:block;">' + new Date(req2.date).toLocaleString() + '<button onclick="deleteRequest(' + j + ')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;margin-left:10px;font-size:10px;float:right;">Delete</button></span>';
+                   list.appendChild(div2);
+               }
+         }
+ 
+function approveRequest(index) {
+              var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+              var pendingRequests = requests.filter(function(r) { return r.status === 'pending'; });
+              var req = pendingRequests[index];
+              
+              var defaultAmount = req.amount || 30;
+              var addBalance = prompt('Enter balance amount to add for ' + req.username + ':', defaultAmount);
+              if (addBalance === null) return;
+              
+              var balanceNum = parseFloat(addBalance);
+              if (isNaN(balanceNum) || balanceNum <= 0) {
+                  alert('Please enter a valid positive number');
+                  return;
+              }
+              
+if (confirm('Approve cash-in request for ' + req.username + ' (Ref: ' + req.refNumber + ')? Adding ' + balanceNum + ' pesos.')) {
+                   var allRequests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+                   var realIndex = allRequests.findIndex(function(r) { 
+                       return r.username === req.username && r.refNumber === req.refNumber && r.status === 'pending'; 
+                   });
+                   if (realIndex !== -1) {
+                       allRequests[realIndex].status = 'approved';
+                       allRequests[realIndex].approvedAmount = balanceNum;
+                   }
+                   localStorage.setItem('cashInRequests', JSON.stringify(allRequests));
+                   ActivitiesDB.logActivity('cash_in_approved', 'Approved cash-in for ' + req.username, { username: req.username, amount: balanceNum });
+                   var users = JSON.parse(localStorage.getItem('users') || '{}');
+                   if (users[req.username] && typeof users[req.username] === 'object') {
+                       users[req.username].balance = (users[req.username].balance || 0) + balanceNum;
+                       localStorage.setItem('users', JSON.stringify(users));
+                   }
+                   loadCashInRequests();
+               }
+           }
+
+function denyRequest(index) {
+            var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+            var pendingRequests = requests.filter(function(r) { return r.status === 'pending'; });
+            var req = pendingRequests[index];
+            
+            if (confirm('Deny cash-in request for ' + req.username + ' (Ref: ' + req.refNumber + ')?')) {
+                var allRequests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+                var realIndex = allRequests.findIndex(function(r) { 
+                    return r.username === req.username && r.refNumber === req.refNumber && r.status === 'pending'; 
+                });
+                if (realIndex !== -1) {
+                    allRequests[realIndex].status = 'denied';
+                }
+                localStorage.setItem('cashInRequests', JSON.stringify(allRequests));
+                ActivitiesDB.logActivity('cash_in_denied', 'Denied cash-in for ' + req.username, { username: req.username, refNumber: req.refNumber });
+                loadCashInRequests();
+            }
+        }
+ 
+function deleteRequest(index) {
+             var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+             var processedRequests = requests.filter(function(r) { return r.status !== 'pending'; });
+             var req = processedRequests[index];
+             
+             if (confirm('Delete this ' + req.status + ' request for ' + req.username + '?')) {
+                 var allRequests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+                 var realIndex = allRequests.findIndex(function(r) { 
+                     return r.username === req.username && r.refNumber === req.refNumber && r.status !== 'pending'; 
+                 });
+                 if (realIndex !== -1) {
+                     allRequests.splice(realIndex, 1);
+                 }
+                 localStorage.setItem('cashInRequests', JSON.stringify(allRequests));
+                 ActivitiesDB.logActivity('cash_in_deleted', 'Deleted cash-in request for ' + req.username, { username: req.username, status: req.status });
+                 loadCashInRequests();
+             }
+         }
+
+function clearProcessedRequests() {
+    if (confirm('Delete all approved and denied cash-in requests?')) {
+        ActivitiesDB.logActivity('cash_in_history_cleared', 'Cleared all processed cash-in requests');
+        var requests = JSON.parse(localStorage.getItem('cashInRequests') || '[]');
+        var pendingRequests = requests.filter(function(r) { return r.status === 'pending'; });
+        localStorage.setItem('cashInRequests', JSON.stringify(pendingRequests));
+        loadCashInRequests();
+    }
+}
+
+function clearPortalKeyRequests() {
+    if (confirm('Delete all PortalKey purchase records?')) {
+        ActivitiesDB.logActivity('portalkey_history_cleared', 'Cleared all PortalKey records');
+        localStorage.setItem('portalKeyRequests', '[]');
+        localStorage.setItem('portalKeys', '{}');
+        loadPortalKeyRequests();
+    }
+}
+   
+         function deletePortalKey(displayIndex) {
+             var requests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+             var sortedRequests = requests.slice().sort(function(a, b) { 
+                 return new Date(b.date) - new Date(a.date); 
+             });
+             var req = sortedRequests[displayIndex];
+             
+             if (confirm('Delete PortalKey for ' + req.username + '? Serial: ' + req.serialNumber)) {
+                 var allRequests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+                 var realIndex = allRequests.findIndex(function(r) { 
+                     return r.username === req.username && r.serialNumber === req.serialNumber; 
+                 });
+                 if (realIndex !== -1) {
+                     allRequests.splice(realIndex, 1);
+                 }
+                 localStorage.setItem('portalKeyRequests', JSON.stringify(allRequests));
+                 
+var portalKeys = JSON.parse(localStorage.getItem('portalKeys') || '{}');
+                  if (portalKeys[req.username]) {
+                      portalKeys[req.username] = portalKeys[req.username].filter(function(k) { 
+                          return k.serial !== req.serialNumber; 
+                      });
+                      localStorage.setItem('portalKeys', JSON.stringify(portalKeys));
+                  }
+loadPortalKeyRequests();
+              }
+          }
+    
+         function editPromoPrice() {
+             var currentPrice = localStorage.getItem('promoPrice') || '30';
+             var newPrice = prompt('Enter new Promo price (in pesos):', currentPrice);
+             if (newPrice !== null) {
+                 var priceNum = parseInt(newPrice);
+                 if (!isNaN(priceNum) && priceNum > 0) {
+                     localStorage.setItem('promoPrice', priceNum.toString());
+                     document.getElementById('promoPriceDisplay').textContent = priceNum;
+                 } else {
+                     alert('Please enter a valid positive number');
+                 }
+             }
+         }
+    
+         function editPortalKeyPrice() {
+              var currentPrice = localStorage.getItem('portalKeyPrice') || '50';
+             var newPrice = prompt('Enter new PortalKey price (in pesos):', currentPrice);
+             if (newPrice !== null) {
+                 var priceNum = parseInt(newPrice);
+                 if (!isNaN(priceNum) && priceNum > 0) {
+                     localStorage.setItem('portalKeyPrice', priceNum.toString());
+                     document.getElementById('portalKeyPriceDisplay').textContent = priceNum;
+                 } else {
+                     alert('Please enter a valid positive number');
+                 }
+             }
+         }
+   
+         function editPortalKeySerial(index) {
+             var requests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+             var sortedRequests = requests.slice().sort(function(a, b) { 
+                 return new Date(b.date) - new Date(a.date); 
+             });
+             var req = sortedRequests[index];
+             
+             var newSerial = prompt('Enter new MikroTik Serial Number for ' + req.username + ':', req.serialNumber);
+             if (!newSerial) return;
+             
+             var newKey = generatePortalKeyFromSerial(newSerial.trim());
+             if (!newKey) {
+                 alert('Invalid serial number');
+                 return;
+             }
+             
+if (confirm('Update serial and regenerate PortalKey?\nNew Serial: ' + newSerial.trim() + '\nNew Key: ' + newKey)) {
+                  var allRequests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+                  var realIndex = allRequests.findIndex(function(r) { 
+                      return r.username === req.username && r.serialNumber === req.serialNumber && r.portalKey === req.portalKey; 
+                  });
+                  if (realIndex !== -1) {
+                      allRequests[realIndex].serialNumber = newSerial.trim();
+                      allRequests[realIndex].portalKey = newKey;
+                  }
+                  localStorage.setItem('portalKeyRequests', JSON.stringify(allRequests));
+                  
+                  var portalKeys = JSON.parse(localStorage.getItem('portalKeys') || '{}');
+                  if (portalKeys[req.username]) {
+                      for (var j = 0; j < portalKeys[req.username].length; j++) {
+                          if (portalKeys[req.username][j].serial === req.serialNumber) {
+                              portalKeys[req.username][j].serial = newSerial.trim();
+                              portalKeys[req.username][j].code = newKey;
+                              break;
+                          }
+                      }
+                      localStorage.setItem('portalKeys', JSON.stringify(portalKeys));
+                  }
+                  loadPortalKeyRequests();
+              }
+         }
+   
+         function generatePortalKeyFromSerial(serial) {
+             if (!serial || serial.trim() === '') return null;
+             
+             var serialTrimmed = serial.trim().toUpperCase();
+             var hash = 0;
+             for (var i = 0; i < serialTrimmed.length; i++) {
+                 var char = serialTrimmed.charCodeAt(i);
+                 hash = ((hash << 5) - hash) + char;
+                 hash = hash & hash;
+             }
+             hash = Math.abs(hash);
+             
+             var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+             var result = '';
+             var seed = hash;
+             
+             for (var i = 0; i < 20; i++) {
+                 seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+                 result += chars.charAt(seed % chars.length);
+             }
+             
+             return result.substring(0, 5) + '-' + 
+                    result.substring(5, 10) + '-' + 
+                    result.substring(10, 15) + '-' + 
+                    result.substring(15, 20);
+         }
+   
+         function loadPortalKeyRequests() {
+             var requests = JSON.parse(localStorage.getItem('portalKeyRequests') || '[]');
+             var list = document.getElementById('portalKeyRequestsList');
+             list.innerHTML = '';
+             
+             var sortedRequests = requests.slice().sort(function(a, b) { 
+                 return new Date(b.date) - new Date(a.date); 
+             });
+             
+             if (sortedRequests.length === 0) {
+                 list.innerHTML = '<span style="color:#aaa;font-size:14px;">No PortalKey purchases found.</span>';
+                 return;
+             }
+             
+for (var i = 0; i < sortedRequests.length; i++) {
+                  var req = sortedRequests[i];
+                  var div = document.createElement('div');
+                  div.className = 'user-item';
+                  var keyInfo = req.portalKey ? ' | Key: ' + req.portalKey : '';
+                  div.innerHTML = '<span>' + req.username + '<br><small style="color:#aaa;">Serial: ' + req.serialNumber + keyInfo + '</small></span><span style="color:#28a745;font-weight:bold;">PURCHASED</span><span style="color:#aaa;font-size:12px;display:block;">' + new Date(req.date).toLocaleString() + '<button onclick="editPortalKeySerial(' + i + ')" style="background:#485460;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;margin-left:10px;font-size:10px;">Edit Serial</button><button onclick="deletePortalKey(' + i + ')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;margin-left:5px;font-size:10px;">Delete</button></span>';
+list.appendChild(div);
+               }
+          }
+  
+  function loadPromoHistory() {
+      var history = JSON.parse(localStorage.getItem('promoHistory') || '[]');
+      var list = document.getElementById('promoHistoryList');
+      list.innerHTML = '';
+      
+      var sortedHistory = history.slice().sort(function(a, b) { 
+          return new Date(b.date) - new Date(a.date); 
+      });
+      
+if (sortedHistory.length === 0) {
+           list.innerHTML = '<span style="color:#aaa;font-size:14px;">No Voucher Generator purchases found.</span>';
+           return;
+       }
+       
+       for (var i = 0; i < sortedHistory.length; i++) {
+           var h = sortedHistory[i];
+           var div = document.createElement('div');
+           div.className = 'user-item';
+           div.innerHTML = '<span>' + h.username + '<br><small style="color:#aaa;">1 month access</small></span><span style="color:#28a745;font-weight:bold;">' + h.price + ' pesos</span><span style="color:#aaa;font-size:12px;display:block;">' + new Date(h.date).toLocaleString() + '<button onclick="deletePromoHistory(' + i + ')" style="background:#dc3545;color:white;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;margin-left:10px;font-size:10px;float:right;">Delete</button></span>';
+           list.appendChild(div);
+      }
+  }
+  
+  function deletePromoHistory(index) {
+      var history = JSON.parse(localStorage.getItem('promoHistory') || '[]');
+      var sortedHistory = history.slice().sort(function(a, b) { 
+          return new Date(b.date) - new Date(a.date); 
+      });
+      var h = sortedHistory[index];
+      
+      if (confirm('Delete this Voucher Generator purchase for ' + h.username + '?')) {
+          var allHistory = JSON.parse(localStorage.getItem('promoHistory') || '[]');
+          var realIndex = allHistory.findIndex(function(item) { 
+              return item.username === h.username && item.date === h.date; 
+          });
+          if (realIndex !== -1) {
+              allHistory.splice(realIndex, 1);
+          }
+          localStorage.setItem('promoHistory', JSON.stringify(allHistory));
+          loadPromoHistory();
+      }
+  }
+  
+function clearPromoHistory() {
+        if (confirm('Delete all Voucher Generator purchase records?')) {
+            localStorage.setItem('promoHistory', '[]');
+            loadPromoHistory();
+        }
+    }
+    
+    function saveTelegramSettings() {
+        var token = document.getElementById('telegramBotToken').value.trim();
+        var chatId = document.getElementById('telegramChatId').value.trim();
+        var errorDiv = document.getElementById('telegramError');
+        var successDiv = document.getElementById('telegramSuccess');
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+        
+        if (!token || !chatId) {
+            errorDiv.textContent = 'Please enter both Bot Token and Chat ID';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        localStorage.setItem('telegramBotToken', token);
+        localStorage.setItem('telegramChatId', chatId);
+        successDiv.textContent = 'Telegram settings saved!';
+        successDiv.style.display = 'block';
+    }
+    
+    function testTelegramNotification() {
+        var token = document.getElementById('telegramBotToken').value.trim();
+        var chatId = document.getElementById('telegramChatId').value.trim();
+        var errorDiv = document.getElementById('telegramError');
+        var successDiv = document.getElementById('telegramSuccess');
+        errorDiv.style.display = 'none';
+        successDiv.style.display = 'none';
+        
+        if (!token || !chatId) {
+            errorDiv.textContent = 'Please enter both Bot Token and Chat ID';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        var message = '🔔 Test Notification\nTelegram notifications are working!';
+        var url = 'https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chatId + '&text=' + encodeURIComponent(message);
+        
+        var img = new Image();
+        img.onload = function() {
+            successDiv.textContent = 'Test message sent! Check your Telegram.';
+            successDiv.style.display = 'block';
+        };
+        img.onerror = function() {
+            errorDiv.textContent = 'Failed to send test message. Check your Bot Token and Chat ID.';
+            errorDiv.style.display = 'block';
+        };
+        img.src = url;
+    }
+    
+    // Load saved Telegram settings on page load
+    document.getElementById('telegramBotToken').value = localStorage.getItem('telegramBotToken') || '';
+    document.getElementById('telegramChatId').value = localStorage.getItem('telegramChatId') || '';
+    
+loadAccounts();
+             loadCashInRequests();
+             document.getElementById('portalKeyPriceDisplay').textContent = localStorage.getItem('portalKeyPrice') || '50';
+             document.getElementById('promoPriceDisplay').textContent = localStorage.getItem('promoPrice') || '30';
+             loadPortalKeyRequests();
+             loadPromoHistory();
+       </script>
+ </body>
+ </html>
